@@ -1,0 +1,10 @@
+extends ../layouts/page.jade
+include ../blocks/title.jade
+
+block title
+  +title('main')
+
+block content
+  .main-header
+    h1.header Welcome to #[span.em #{projectName}]!
+    p.sl Now you can start explore #[strong Jade] and #[strong Stylus].

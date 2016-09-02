@@ -1,0 +1,39 @@
+{
+  "name": "jen-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "gulp starter kit",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "gulp",
+    "config",
+    "kit",
+    "starterkit",
+    "front-end",
+    "frontend",
+    "taskrunner",
+    "jade",
+    "stylus"
+  ],
+  "author": "iobuhov",
+  "license": "MIT",
+  "devDependencies": {
+    "browser-sync": "^2.14.3",
+    "gulp": "^3.9.1",
+    "gulp-cached": "^1.1.0",
+    "gulp-filter": "^4.0.0",
+    "gulp-jade": "^1.1.0",
+    "gulp-jade-inheritance": "^0.5.5",
+    "gulp-jsbeautifier": "^2.0.3",
+    "gulp-load-plugins": "^1.2.4",
+    "gulp-newer": "^1.2.0",
+    "gulp-plumber": "^1.1.0",
+    "gulp-print": "^2.0.1",
+    "gulp-rename": "^1.2.2",
+    "gulp-sourcemaps": "^1.6.0",
+    "gulp-stylus": "^2.5.0"
+  }
+}
