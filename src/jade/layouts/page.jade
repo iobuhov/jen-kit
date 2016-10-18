@@ -3,15 +3,13 @@ html
   head(lang="ru")
     meta(charset="utf-8")
     meta(http-equiv="X-UA-Compatible", content="IE=edge")
-    //- enable if site is responsive
     //- meta(name="viewport", content="width=device-width, initial-scale=1")
     block title
       title page title | projectName
-    block csslinks
-    //- link(rel="stylesheet", href="css/fonts.css")
+    block css
     link(rel="stylesheet", href="css/main.css")
   body
-    //- script(src="js/jquery-2.2.3.min.js")
-    .content
+    block header
+    main#content
       block content
-    //- script(src="js/bootstrap.min.js")
+    block footer

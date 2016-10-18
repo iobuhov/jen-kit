@@ -1,6 +1,7 @@
+var fs          = require('fs')
+var path        = require('path');
 var gulp        = require('gulp');
 var $           = require('gulp-load-plugins')();
-var path        = require('path');
 var sync        = require('browser-sync').create();
 var gutil       = require('gulp-util');
 var pkg         = require('./package.json');
@@ -9,6 +10,9 @@ var noop        = gutil.noop.bind(gutil);
 var print       = $.print();
 var reloadAfter = 256;
 var left        = reloadAfter;
+var utils       = require('./utils');
+var dirtreeSync = utils.dirtreeSync;
+var getdata     = utils.getdata;
 
 function compileStylus() {
   var compile     = $.stylus({ 'include css': true }),
@@ -42,9 +46,20 @@ function compileStylus() {
 };
 
 function compileJade() {
-  var compile   = $.jade({ data: { projectName: pkg.name }}),
+  var jadeopt   = {
+    basedir: path.join(__dirname, 'src', 'jade'),
+    data: {
+      projectName : pkg.name,
+      jsv0        : 'javscript:void(0)',
+      getdata     : function(file) {
+        return getdata(path.join(__dirname, 'src', 'data'), file);
+      }
+    }
+  };
+
+  var compile   = $.jade(jadeopt),
       files     = join('src', 'jade', '**', '*.jade'),
-      pages     = join('src', 'jade', 'pages', '*.jade'),
+      pages     = join('src', 'jade', 'pages', '**', '*.jade'),
       prettify  = $.jsbeautifier({
         extra_liners      : [],
         indent_inner_html : true,
@@ -102,8 +117,18 @@ function server() {
   });
 };
 
+function buildPagesjson() {
+  var dirpath  = path.join(__dirname, 'src', 'jade', 'pages');
+  var destpath = path.join(__dirname, 'src', 'data', 'pages.json');
+  var data     = dirtreeSync(dirpath);
+  var jsondata = JSON.stringify(data, null, '  ');
+  var file     = fs.openSync(destpath, 'w');
+  fs.writeSync(file, jsondata);
+}
+
+gulp.task('build:pages.json', buildPagesjson);
 gulp.task('compile:stylus', compileStylus);
-gulp.task('compile:jade', ['compile:stylus'], compileJade);
+gulp.task('compile:jade', ['compile:stylus', 'build:pages.json'], compileJade);
 gulp.task('recompile:stylus', compileStylus);
 gulp.task('recompile:jade', compileJade);
 gulp.task('reload', ['recompile:jade'], reload);
