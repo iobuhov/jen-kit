@@ -1,3 +1,4 @@
+include /mixins/index.jade
 doctype html
 html
   head(lang="ru")
@@ -7,7 +8,7 @@ html
     block title
       title page title | projectName
     block css
-    link(rel="stylesheet", href="css/main.css")
+      link(rel="stylesheet", href="css/main.css")
   body
     block header
     main#content

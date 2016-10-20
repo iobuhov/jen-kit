@@ -1,0 +1,5 @@
+screen(size)
+  size = str(size)
+  unless size in ('xs' 'sm' 'md' 'lg')
+    error('Error: invalid size: size must be one of [xs sm md lg], but got' + size)
+  push($media-size[size], block)

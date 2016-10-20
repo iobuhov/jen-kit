@@ -1,0 +1,34 @@
+// --------------------------------------------------
+// BEM helper mixins
+
+e-prefix    = '__'
+m-prefix    = '--'
+m-delimiter = '_'
+
+b(name)
+  .{name}
+    {block}
+
+m(mod, val=null)
+  val    = val && m-delimiter + val
+  mod    = m-prefix + mod
+  mod    = val ? mod + val : mod
+  caller = called-from[0]
+
+  unless caller in ('e' 'b')
+    error('Error: invalid call, m must be called from "e" or "b" mixins')
+  &{mod}
+    {block}
+
+e(element)
+  element = e-prefix + element
+  caller  = called-from[0]
+
+  unless caller in ('b' 'e' 'm')
+    error('Error: invalid call, e must be called from "e", "m"  or "b" mixins')
+  if caller in ('e' 'm')
+    & ^[0]{element}
+      {block}
+  else
+    &{element}
+      {block}

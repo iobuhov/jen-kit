@@ -1,14 +1,13 @@
-.main-header
++b(header)
   font-size: 2em * 1.5
-  color: lighten(#36393f, 20)
-  // color darken(color, percent)
+  color: #A0A4A8
   padding-left: 0.5em
   padding-top: 0.5em
-
-  .header
+  +e(title)
     text-transform: uppercase
-    .em
+  +e(text)
+    +m(vivid)
       color orange
-  .sl
+  +e(subtitle)
     font-size .75em
-    color lighten(#36393f, 40)
+    color #A0A4A8
