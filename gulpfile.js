@@ -175,18 +175,6 @@ gulp.task('reload'           , ['recompile:jade'], reload);
 gulp.task('server'           , ['compile:jade'], server);
 gulp.task('watch'            , ['server'], function() {
   global.isWatch = true;
-  // gulp.watch(
-  //   [join('src', 'pages', '*.jade')],
-  //   function (event) {
-  //     if (!event.type === 'changed') {
-  //       global.fullBuild = true;
-  //       buildPagesjson();
-  //     }
-  //   });
-  // gulp.watch(
-  //   [join('src', 'data', 'pages.json')],
-  //   ['compile:jade']
-  // )
   gulp.watch(
     [
       join('src', 'stylus', '**', '*.styl'),
