@@ -40,6 +40,10 @@ function compileStylus() {
         sourceRoot     : '/stylus'
       }),
       write       = gulp.dest(join('public', 'css')),
+      addPrefixes = $.autoprefixer({
+        browsers: ['last 2 versions', 'ie >= 9'],
+        cascade: false
+      });
       inject      = function() {
         if (left-- === 0) {
           left = reloadAfter;
@@ -52,6 +56,7 @@ function compileStylus() {
     .pipe(catcherrs)
     // .pipe(startmap)
     .pipe(compile)
+    .pipe(addPrefixes)
     .pipe(rename)
     // .pipe(endmap)
     .pipe(write)
