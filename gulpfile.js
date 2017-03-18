@@ -1,199 +1,466 @@
-var fs           = require('fs')
-var path         = require('path');
-var gulp         = require('gulp');
-var gutil        = require('gulp-util');
-var $            = require('gulp-load-plugins')();
-var sync         = require('browser-sync').create();
-var postbem      = require('posthtml-bem');
-var cliargs      = require('command-line-args');
-var postbemsugar = require('./vendor/posthtml-bem-sugar.es5.js');
-var pkg          = require('./package.json');
-var utils        = require('./utils');
-var dirtreeSync  = utils.dirtreeSync;
-var getdata      = utils.getdata;
-var prepareb     = utils.prepareBlock;
-var join         = path.join.bind(path);
-var noop         = gutil.noop.bind(gutil);
-var print        = $.print();
-var reloadAfter  = 256;
-var left         = reloadAfter;
+// -----------------------------------------------------------------------------
+// gulpfile.js --- Jen-kit gulp configuration file.
+//
+// Copyright (c) 2017 Ilya Obuhov
+//
+// Author: Ilya Obuhov <iobuhov.mail@gmail.com>
+// URL: https://github.com/iobuhov
 
-function bem() {
-  var optionDefinitions = [
-    { name: 'command', type: String, defaultOption: true },
-    { name: 'name', type: String, alias: 'n' }
-  ];
-  var args = cliargs(optionDefinitions);
-  if (args.command === 'bem' && args.name) {
-    prepareb(path.join('src', 'blocks'), args.name);
+
+
+// -----------------------------------------------------------------------------
+// Available tasks:
+//   `gulp`
+
+
+
+// -----------------------------------------------------------------------------
+// Modules
+//
+// gulp               : The streaming build system
+// gulp-autoprefixer  : Prefix CSS
+// gulp-load-plugins  : Automatically load Gulp plugins
+// gulp-plumber       : Prevent pipe breaking from errors
+// gulp-rename        : Rename files
+// gulp-util          : Utility functions
+// gulp-watch         : Watch stream
+// browser-sync       : Sync compiled files with browser
+// posthtml-bem       : BEM-style syntax plugin for PostHTML postprocessor
+// utils              : Jen-kit utility functions
+// posthtml-bem-sugar : Simplify BEM naming structure in jade/pug
+//
+// -----------------------------------------------------------------------------
+
+// Plugins
+
+var gulp             = require('gulp');
+var gutil            = require('gulp-util');
+var $                = require('gulp-load-plugins')();
+var sync             = require('browser-sync').create();
+var postHtmlBEM      = require('posthtml-bem');
+var cliargs          = require('command-line-args');
+var runSequence      = require('run-sequence');
+// todo: test it from npm
+var postHtmlBEMSugar = require('./vendor/posthtml-bem-sugar.es5.js');
+
+
+// Node Modules
+
+var fs               = require('fs')
+var path             = require('path');
+
+// Utils
+
+var utils            = require('./utils');
+var dirtreeSync      = utils.dirtreeSync;
+var getData          = utils.getdata;
+var generateBlock    = utils.generateBlock;
+
+// Module globals
+
+var pjoin            = path.join.bind(path);
+var noop             = gutil.noop.bind(gutil);
+var log              = gutil.log.bind(gutil);
+var print            = $.print();
+var pkg              = require('./package.json');
+
+
+
+// -----------------------------------------------------------------------------
+// Gulp Tasks Declaration
+//
+
+// Tasks object -- keep refs for all task callbacks
+var tasks = {
+  block: block,
+  compile: {
+    stylus: CompileStylus(),
+    pug: CompilePug()
+  },
+  copy: { assets: copyAssets },
+  parse: { pages: parsePagesDir },
+  plugins: logPlugins,
+  reload: reload,
+  seq: {
+    assets: seqAssets,
+    pug: seqPug,
+    server: seqServer,
+    watch: seqWatch
+  },
+  server: server,
+  watch: {
+    assets: watchAssets(),
+    pug: watchPug(),
+    stylus: watchStylus()
   }
 }
 
-function compileStylus() {
-  var compile     = $.stylus({ 'include css': true }),
-      files       = join('src', 'stylus', 'main.styl'),
-      catcherrs   = $.plumber(),
-      rename      = $.rename({ dirname: '.' }),
-      startmap    = $.sourcemaps.init(),
-      endmap      = $.sourcemaps.write('.', {
-        includeContent : true,
-        sourceRoot     : '/stylus'
-      }),
-      write       = gulp.dest(join('public', 'css')),
-      addPrefixes = $.autoprefixer({
-        browsers: ['last 2 versions', 'ie >= 9'],
-        cascade: false
+gulp.task('block'           , tasks.block);
+gulp.task('compile:pug'     , tasks.compile.pug);
+gulp.task('compile:stylus'  , tasks.compile.stylus);
+gulp.task('copy:assets'     , tasks.copy.assets)
+gulp.task('parse:pages'     , tasks.parse.pages);
+gulp.task('plugins'         , tasks.plugins);
+gulp.task('reload'          , tasks.reload);
+gulp.task('seq:pug'         , tasks.seq.pug);
+gulp.task('seq:server'      , tasks.seq.server);
+gulp.task('seq:watch'       , tasks.seq.watch);
+gulp.task('seq:assets'      , tasks.seq.assets);
+gulp.task('server'          , tasks.server);
+gulp.task('watch:assets'    , tasks.watch.assets);
+gulp.task('watch:pug'       , tasks.watch.pug);
+gulp.task('watch:stylus'    , tasks.watch.stylus);
+gulp.task('default'         , ['seq:server']);
+
+
+// -----------------------------------------------------------------------------
+// Pug sequence
+
+function seqPug() {
+  runSequence('parse:pages', 'compile:pug', 'reload')
+}
+
+// -----------------------------------------------------------------------------
+// Assets sequence
+
+function seqAssets() {
+  runSequence('copy:assets', 'reload')
+}
+
+// -----------------------------------------------------------------------------
+// Server seq
+
+function seqServer(cb) {
+  runSequence(['parse:pages', 'compile:stylus', 'copy:assets'],
+              'compile:pug',
+              'seq:watch',
+              'server', cb)
+}
+
+// -----------------------------------------------------------------------------
+// Watch sequence
+
+function seqWatch(cb) {
+  global.isWatch = true;
+  runSequence(['watch:assets', 'watch:pug', 'watch:stylus'])
+  cb();
+}
+
+// -----------------------------------------------------------------------------
+// Watch Pug
+
+function watchPug() {
+  var root = 'src',
+      dirs = ['blocks', 'layouts', 'mixins', 'pages', 'data'],
+      files = dirs.map(function(dir) {
+        return pjoin(root, dir, '**', '*.pug')
       });
-      inject      = function() {
-        if (left-- === 0) {
-          left = reloadAfter;
-          sync.reload();
-        }
-        return sync.stream();
-      }
 
-  return gulp.src(files)
-    .pipe(catcherrs)
-    // .pipe(startmap)
-    .pipe(compile)
-    .pipe(addPrefixes)
-    .pipe(rename)
-    // .pipe(endmap)
-    .pipe(write)
-    .pipe(global.isWatch ?
-          inject() :
-          noop())
-};
+  return function () {
+    return $.watch(files, tasks.seq.pug);
+  }
+}
 
-function compileJade() {
-  var jadeopt   = {
-    basedir: path.join(__dirname, 'src'),
-    data: {
-      projectName : pkg.name,
-      jsv0        : 'javscript:void(0)',
-      getdata     : function(file) {
-        return getdata(path.join(__dirname, 'src', 'data'), file);
+// -----------------------------------------------------------------------------
+// Watch Assets
+
+function watchAssets() {
+  var files = pjoin('src', 'assets', '**', '*');
+  return function () {
+    return $.watch(files, tasks.seq.assets)
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Watch Stylus
+
+function watchStylus() {
+  var root = 'src',
+      dirs = ['blocks', 'stylus'],
+      files = dirs.map(function(dir) {
+        return pjoin(root, dir, '**', '*.styl')
+      });
+  return function () {
+    // TODO: separate
+    return $.watch(files, function() {
+      runSequence('compile:stylus')
+    })
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Block --- Generate empty block under src/blocks
+//
+// Options:
+//   --name, -n    Block name [string]
+
+function block(cb) {
+  console.log('---------- Generate Block')
+  var optionDefinitions = [
+    { name: 'gulp-task-name', type: String,  defaultOption: true },
+    { name: 'name', type: String, alias: 'n' }
+  ];
+  var args = cliargs(optionDefinitions);
+
+  if (args['gulp-task-name'] === 'block' && args.name) {
+    generateBlock(pjoin('src', 'blocks'), args.name);
+  }
+  cb()
+}
+
+// -----------------------------------------------------------------------------
+// Compile Stylus --- retrun stylus compilation task callback
+
+function CompileStylus() {
+
+  // Disable or enable plugins;
+  var use = {
+    autoprefixer: true,
+    debug: true,
+    dest: true,
+    plumber: true,
+    rename: true,
+    sourcemap: false,
+    stylus: true,
+    sync: true
+  }
+
+  // Plugins options
+  var options = {
+    files: pjoin('src', 'stylus', 'main.styl'),
+    dest: pjoin('public', 'css'),
+    debug: {title: 'Stylus: '},
+    stylus: { 'include css': true },
+    sync: { 'reload after': 250},
+    rename: { dirname: '.' },
+    sourcemap: {
+      write: {
+        includeContent: false,
+        // As server serve also from `src`
+        // redefine origin root to serve `.styl`
+        // files as localhost:3000/stylus/<file>
+        // This alow directly edit files in Chrome,
+        // if project addet to workspace.
+        // use this when includeContent is set to false
+        sourceRoot: '/stylus'
       }
+    },
+    autoprefixer: {
+      browsers: ['last 2 versions', 'ie >= 9'],
+      cascade: false
     }
   };
 
-  // all go to plugin except index.jade
-  function indexIgnore(plugin) {
+  // Inject -- inject css to browser.
+  // Reload browsers after n-th func call.
+  // The amount of calls before reloading
+  // controled by `reload after` option.
+  // Browser reloading ensure correct css rendering.
+  function Inject() {
+
+    var counter = options.sync['reload after'];
+    var left = counter;
+    return function () {
+      if (left-- === 0) {
+        left = counter;
+        sync.reload()
+      }
+      log('reload after:', left)
+      return sync.stream();
+    }
+  }
+
+  var inject = Inject();
+
+  return function() {
+    console.log('---------- Stylus')
+    var compile     = use.stylus ? $.stylus(options.stylus) : noop(),
+        catchErrors = use.plumber ? $.plumber() : noop(),
+        rename      = use.rename ? $.rename(options.rename) : noop(),
+        report      = use.debug ? $.debug(options.debug) : noop(),
+        startMap    = use.sourcemap ? $.sourcemaps.init() : noop(),
+        endMap      = use.sourcemap ? $.sourcemaps.write('', options.sourcemap.write) : noop(),
+        write       = use.dest ? gulp.dest(options.dest) : noop(),
+        addPrefixes = use.autoprefixer ? $.autoprefixer(options.autoprefixer) : noop(),
+        // this step should be called, to produce strema
+        dispatch    = use.sync && global.isWatch ? inject() : noop();
+    return gulp.src(options.files)
+      .pipe(catchErrors)
+      .pipe(startMap)
+      .pipe(compile)
+      .pipe(addPrefixes)
+      .pipe(rename)
+      .pipe(endMap)
+      .pipe(write)
+      .pipe(report)
+      .pipe(dispatch)
+  }
+
+};
+
+// -----------------------------------------------------------------------------
+// Compile Pug --- return pug compilation task callback
+
+function CompilePug() {
+
+  // Disable or enable plugins;
+  var use = {
+    cached: true,
+    debug: true,
+    dest: true,
+    filter: true,
+    jsbeautifier: true,
+    newer: true,
+    posthtml: true,
+    plumber: true,
+    pug: true,
+    pugInheritance: true,
+    rename: true,
+    reporter: false,
+  }
+
+  // Plugins options
+  var options = {
+    files: pjoin('src', '**', '*.pug'),
+    dest: pjoin('public'),
+    debug: {title: 'Pug: '},
+    pug: {
+      basedir: pjoin(__dirname, 'src'),
+      data: {
+        projectName: pkg.name,
+        jsv0: 'javascript:void(0)',
+        getdata: function(file) {
+          return getData(pjoin(__dirname, 'src', 'data'), file)
+        }
+      }
+    },
+    pugInheritance: {
+      basedir: 'src',
+      skip: 'node_modules'
+    },
+    rename: { dirname: '.' },
+    filter: [ pjoin('src', 'pages', '**', '*.pug') ],
+    cached: 'pug',
+    postHtmlBEMSugar: {
+      blockPrefix: 'b_',
+      elemPrefix: 'e_',
+      modPrefix: 'm_',
+      modDelim: '_'
+    },
+    postHtmlBEM: {
+      elemPrefix: '__',
+      modPrefix: '--',
+      modDlmtr: '_'
+    },
+    jsbeautifier: {
+      extra_liners: [],
+      indent_inner_html: true,
+      indent_size: 2,
+      preserve_newlines: true,
+      unformatted: []
+    },
+    newer: {
+      dest: 'public',
+      ext: '.html',
+      map: function(relpath) {
+        return path.basename(relpath);
+      }
+    }
+  }
+
+  // excludeIndex -- exclude front page from
+  // plugin `plugin` when watching
+  function excludeIndex(plugin) {
     result = $.if(function(file) {
-      return global.isWatch && !/pages[\\\/]index.jade/.test(file.path);
+      return global.isWatch && !/pages[\\\/]index.pug/.test(file.path);
     }, plugin);
     return result;
   }
 
-  var compile   = $.jade(jadeopt),
-      files     = join('src', '**', '*.jade'),
-      pages     = join('src', 'pages', '**', '*.jade'),
-      report    = $.jsbeautifier.reporter(),
-      catcherrs = $.plumber(),
-      findpage  = $.jadeInheritance({ basedir: 'src' }),
-      rename    = $.rename({ dirname: '.' }),
-      write     = gulp.dest('public'),
-      onlypages = $.filter([ pages ]),
-      cached    = indexIgnore($.cached('jade')),
-      posthtml  = $.posthtml([
-        postbemsugar({
-          blockPrefix: 'b_',
-          elemPrefix: 'e_',
-          modPrefix: 'm_',
-          modDelim: '_'
-        }),
-        postbem({
-          elemPrefix: '__',
-          modPrefix: '--',
-          modDlmtr: '_'
-        })
-      ]),
-      prettify  = $.jsbeautifier({
-        extra_liners      : [],
-        indent_inner_html : true,
-        indent_size       : 2,
-        preserve_newlines : true,
-        unformatted       : []
-      }),
-      onlynew   = indexIgnore($.newer({
-        dest: 'public',
-        ext: '.html',
-        map: function(relpath) {
-          return path.basename(relpath);
-        }
-      }));
 
+  return function () {
+    console.log('---------- Pug')
+    var cached        = use.cached ? excludeIndex($.cached(options.cached)) : noop(),
+        catchErrors   = use.plumber ? $.plumber() : noop(),
+        compile       = use.pug ? ($.pug(options.pug)) : noop(),
+        findPages     = use.pugInheritance && global.isWatch ? $.pugInheritance(options.pugInheritance) : noop(),
+        logBeautified = use.reporter ? $.jsbeautifier.reporter() : noop(),
+        onlyNew       = use.newer ? excludeIndex($.newer(options.newer)) : noop(),
+        onlyPages     = use.filter ? $.filter(options.filter) : noop(),
+        posthtml      = use.posthtml ? $.posthtml([ postHtmlBEMSugar(options.postHtmlBEMSugar), postHtmlBEM(options.postHtmlBEM) ]) : noop(),
+        prettify      = use.jsbeautifier ? $.jsbeautifier(options.jsbeautifier) : noop(),
+        rename        = use.rename ? $.rename(options.rename) : noop(),
+        report        = use.debug ? $.debug(options.debug) : noop(),
+        write         = use.dest ? gulp.dest(options.dest) : noop();
+    return gulp.src(options.files)
+      .pipe(catchErrors)
+      .pipe(onlyNew)              // exclude untouched pages from stream
+      .pipe(cached)               // exclude unchanged blocks
+      .pipe(findPages)            // find pages that depend on changed blocks
+      .pipe(onlyPages)            // exclude all blocks
+      .pipe(compile)              // compile pug to html
+      .pipe(posthtml)             // translate BEM nodes
+      .pipe(prettify)
+      .pipe(report)               // print compiled files
+      .pipe(rename)
+      .pipe(write)
+  }
+
+};
+
+// -----------------------------------------------------------------------------
+// Copy Assets --- just copy files from src/assets/ to public/
+
+function copyAssets() {
+  var files = pjoin('src', 'assets', '**', '*'),
+      write = gulp.dest(pjoin('public')),
+      report = $.debug({ title: 'Assets copied: ', showFiles: false});
   return gulp.src(files)
-    .pipe(catcherrs)
-    .pipe(onlynew)
-    .pipe(cached)
-    .pipe(global.isWatch ?
-          findpage :
-          noop())
-    .pipe(onlypages)
-    .pipe(compile)
-    .pipe(posthtml)
-    .pipe(prettify)
     .pipe(report)
-    .pipe(rename)
     .pipe(write)
-};
+}
 
-function reload() {
-  return sync.reload();
-};
+// -----------------------------------------------------------------------------
+// Server --- server setup function
 
 function server() {
   sync.init({
-    reloadOnRestart : true,
-    ghostMode       : { scroll: true },
-    notify          : false,
-    server          : [ 'public', 'src' ],
-    open            : false,
-    port            : 3000,
-    socket          : { domain: 'localhost:3000' }
+    reloadOnRestart: true,
+    ghostMode: { scroll: true },
+    notify: false,
+    server: [ 'public', 'src' ],
+    open: false,
+    port: 3000,
+    socket: { domain: 'localhost:3000' }
   });
 };
 
-function buildPagesjson() {
-  var dirpath  = path.join(__dirname, 'src', 'pages');
-  var destpath = path.join(__dirname, 'src', 'data', 'pages.json');
+// -----------------------------------------------------------------------------
+// Parse Pages Dir -- parse `pages` dir and buidl file tree in json
+
+function parsePagesDir(cb) {
+  var dirpath  = pjoin(__dirname, 'src', 'pages');
+  var destpath = pjoin(__dirname, 'src', 'data', 'pages.json');
   var data     = dirtreeSync(dirpath);
   var jsondata = JSON.stringify(data, null, '  ');
   var file     = fs.openSync(destpath, 'w');
   fs.writeSync(file, jsondata);
   fs.closeSync(file);
+  cb && cb();
 };
 
-function logPlugins() {
-  console.log($);
+// -----------------------------------------------------------------------------
+// Reload --- reload connected browsers
+
+function reload(cb) {
+  sync.reload();
+  cb()
 }
 
-gulp.task('plugins'          , logPlugins);
-gulp.task('bem'              , bem);
-gulp.task('build:pages.json' , buildPagesjson);
-gulp.task('compile:stylus'   , compileStylus);
-gulp.task('compile:jade'     , ['compile:stylus', 'build:pages.json'], compileJade);
-gulp.task('recompile:stylus' , compileStylus);
-gulp.task('recompile:jade'   , ['build:pages.json'], compileJade);
-gulp.task('reload'           , ['recompile:jade'], reload);
-gulp.task('server'           , ['compile:jade'], server);
-gulp.task('watch'            , ['server'], function() {
-  global.isWatch = true;
-  gulp.watch(
-    [
-      join('src', 'stylus', '**', '*.styl'),
-      join('src', 'blocks', '**', '*.styl')
-    ],
-    ['recompile:stylus']);
-  gulp.watch(
-    [
-      join('src', 'blocks', '**', '*.jade'),
-      join('src', 'layouts', '*.jade'),
-      join('src', 'mixins', '*.jade'),
-      join('src', 'pages', '**', '*.jade')
-    ],
-    ['reload']);
-});
+// -----------------------------------------------------------------------------
+// Log Plugins --- log loaded plugins
 
-gulp.task('default', ['watch']);
+function logPlugins(cb) {
+  console.log($);
+  cb();
+}

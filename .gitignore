@@ -55,3 +55,4 @@ npm-debug.log\#*\#
 *.swp
 *.vi
 *~
+src/data/pages.json

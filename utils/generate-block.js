@@ -1,13 +1,20 @@
-// --------------------------------------------------
-// Prepare block
+// -----------------------------------------------------------------------------
+// Generate Block -- generate block dir and files
+//
+// Parms:
+// {dir:string} - the path of the block directory.
+// {name:string} - block name.
+// {types:array} - array of file extensions to be generated in block.
 
-function prepareBlock(dir, name, types) {
+function generateBlock(dir, name, types) {
+
   var fs        = require('fs');
   var path      = require('path');
   var gutil     = require('gulp-util');
   var bt        = require('./block-template.js')
   var files;
-  types = types && types.length > 0 ? types : ['.jade', '.styl'];
+
+  types = types && types.length > 0 ? types : ['.pug', '.styl'];
   dir   = path.join(path.resolve(dir), name);
   files = types.map(function(ext) {
     return path.format({
@@ -24,7 +31,7 @@ function prepareBlock(dir, name, types) {
     var fd = fs.openSync(file, 'wx');
     //TODO: Separate logic!
     // ==============================
-    if ((/\.jade$/).test(file)) {
+    if ((/\.pug$/).test(file)) {
       fs.writeFileSync(file, bt('b_', name));
     }
     // ==============================
@@ -36,4 +43,4 @@ function prepareBlock(dir, name, types) {
   });
 }
 
-module.exports = prepareBlock;
+module.exports = generateBlock;

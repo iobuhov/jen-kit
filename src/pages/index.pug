@@ -1,4 +1,4 @@
-extends /layouts/page.jade
+extends /layouts/page.pug
 
 block css
   style.
@@ -43,7 +43,7 @@ block title
 mixin show(items)
  each file in items
    if file.type === 'file'
-     - var link = file.name.replace('.jade', '.html')
+     - var link = file.name.replace('.pug', '.html')
      if link !== 'index.html'
        li: a(href=link target="_blank")= link.slice(0, -5)
    if file.type === 'dir'
