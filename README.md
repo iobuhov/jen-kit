@@ -1,5 +1,5 @@
 # Jen-kit
-Jen-kit is yet another gulp config for **Jade** and **Stylus**.
+Jen-kit is yet another gulp config for **Pug** and **Stylus**.
 
 # Jen-kit project structure
 ## 19.10.16
@@ -26,6 +26,7 @@ Jen-kit is yet another gulp config for **Jade** and **Stylus**.
       stylus
         mixins/
           mixin1.styl
+          ...
           index.styl
         defaults.styl
         variables.styl
