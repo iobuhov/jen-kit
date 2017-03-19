@@ -33,15 +33,15 @@
 
 // Plugins
 
+var $                = require('gulp-load-plugins')();
+var cliargs          = require('command-line-args');
 var gulp             = require('gulp');
 var gutil            = require('gulp-util');
-var $                = require('gulp-load-plugins')();
-var sync             = require('browser-sync').create();
 var postHtmlBEM      = require('posthtml-bem');
-var cliargs          = require('command-line-args');
+var postHtmlBEMSugar = require('posthtml-bem-sugar');
 var runSequence      = require('run-sequence');
-// todo: test it from npm
-var postHtmlBEMSugar = require('./vendor/posthtml-bem-sugar.es5.js');
+var sync             = require('browser-sync').create();
+
 
 
 // Node Modules
@@ -53,16 +53,17 @@ var path             = require('path');
 
 var utils            = require('./utils');
 var dirtreeSync      = utils.dirtreeSync;
-var getData          = utils.getdata;
 var generateBlock    = utils.generateBlock;
+var getData          = utils.getdata;
+
 
 // Module globals
 
-var pjoin            = path.join.bind(path);
-var noop             = gutil.noop.bind(gutil);
 var log              = gutil.log.bind(gutil);
-var print            = $.print();
+var noop             = gutil.noop.bind(gutil);
+var pjoin            = path.join.bind(path);
 var pkg              = require('./package.json');
+var print            = $.print();
 
 
 
@@ -72,27 +73,37 @@ var pkg              = require('./package.json');
 
 // Tasks object -- keep refs for all task callbacks
 var tasks = {
+
   block: block,
+
   compile: {
     stylus: CompileStylus(),
     pug: CompilePug()
   },
+
   copy: { assets: copyAssets },
+
   parse: { pages: parsePagesDir },
+
   plugins: logPlugins,
+
   reload: reload,
+
   seq: {
     assets: seqAssets,
     pug: seqPug,
     server: seqServer,
     watch: seqWatch
   },
+
   server: server,
+
   watch: {
     assets: watchAssets(),
     pug: watchPug(),
     stylus: watchStylus()
   }
+
 }
 
 gulp.task('block'           , tasks.block);
