@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// gulpfile.js --- Jen-kit gulp configuration file.
+// gulpfile.js --- Jen-kit gulp configuration file
 //
 // Copyright (c) 2017 Ilya Obuhov
 //
@@ -41,6 +41,7 @@ var postHtmlBEM      = require('posthtml-bem');
 var postHtmlBEMSugar = require('posthtml-bem-sugar');
 var runSequence      = require('run-sequence');
 var sync             = require('browser-sync').create();
+var stylusBemSugar   = require('stylus-bem-sugar');
 
 
 
@@ -241,7 +242,10 @@ function CompileStylus() {
     files: pjoin('src', 'stylus', 'main.styl'),
     dest: pjoin('public', 'css'),
     debug: {title: 'Stylus: '},
-    stylus: { 'include css': true },
+    stylus: {
+      'include css': true,
+      use: stylusBemSugar()
+    },
     sync: { 'reload after': 250},
     rename: { dirname: '.' },
     sourcemap: {
