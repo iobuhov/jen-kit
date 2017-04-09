@@ -1,0 +1,10 @@
+size(w, h=w)
+  width: w
+  height: h
+
+_size()
+  len = length(arguments)
+  if len == 1
+    size(arguments[0])
+  else
+    size(arguments[0], arguments[1])

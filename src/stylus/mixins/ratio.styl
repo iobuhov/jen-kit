@@ -1,0 +1,9 @@
+_ratio(w, sep=w, h=w)
+  h = sep unless sep is unquote('/')
+  h = unit(h, '')
+  w = unit(w, '')
+  height: 0
+  padding-top: (w / h) * 100%
+
+ratio()
+  _ratio(arguments)

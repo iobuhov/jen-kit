@@ -1,0 +1,11 @@
+// Max/Min media query builder mixin
+// query {string} '[max|min]
+// screen {string} '[xs|sm|md|lg]
+// query-hash {object} -- object to lookup
+// screen prefixes values. '{min: {xs: 768 ...} ...}
+
+-media(query, screen, query-hash)
+  $prefixes = query-hash[query];
+  $size = $prefixes[screen];
+  @media({query}-width: $size)
+    block

@@ -1,0 +1,18 @@
+@require 'xurl'
+@require '-bg'
+
+_bgimg(url=false, size=url, pos=(50% 50%), repeat=no-repeat)
+
+  if size is fluid
+    $size = contain
+  else if size is cover
+    $size = cover
+  else
+    $size = size
+
+  -bg(pos, repeat, $size)
+
+  background-image: xurl(url) if typeof(url) is 'string'
+
+bgimg()
+ _bgimg(arguments)
