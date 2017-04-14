@@ -320,8 +320,8 @@ function CompileStylus() {
           gulp.dest(options.dest) : noop(),
         addPrefixes = use.autoprefixer ?
           $.autoprefixer(options.autoprefixer) : noop(),
-        groupMedia  = use.group ?
-          $.groupCssMediaQueries() : noop(),
+        // groupMedia  = use.group ?
+        //   $.groupCssMediaQueries() : noop(),
         dispatch    = use.sync && global.isWatch ?
           inject() : noop();
 
