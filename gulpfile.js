@@ -427,6 +427,34 @@ function CompilePug() {
     return result;
   }
 
+  // Pug utility functios
+
+  function range(start, count) {
+    return Array.apply(0, Array(count))
+      .map(function (element, index) {
+        return index + start;
+      });
+  }
+
+  // WARNING: this function may be risky:
+  // args may override attributes.
+  function getArgs(attrs, argsSpec) {
+    var args = {};
+    argsSpec = argsSpec || [];
+    argsSpec.forEach(function(elt, i) {
+
+      if (Array.isArray(elt)) {
+        args[elt[0]] = attrs[elt[0]] || elt[1];
+        delete attrs[elt[0]]
+      } else {
+        args[elt] = attrs[elt];
+        delete attrs[elt]
+      }
+
+    });
+
+    return args;
+  }
 
   return function () {
     console.log('---------- Pug')
