@@ -457,13 +457,13 @@ function CompilePug() {
   }
 
   return function () {
-    console.log('---------- Pug')
+    console.log('---------- Pug');
     var cached        = use.cached ?
           excludeIndex($.cached(options.cached)) : noop(),
         catchErrors   = use.plumber ?
           $.plumber() : noop(),
         compile       = use.pug ?
-          $($.pug(options.pug)) : noop(),
+          $.pug(options.pug) : noop(),
         findPages     = use.pugInheritance && global.isWatch ?
           $.pugInheritance(options.pugInheritance) : noop(),
         logBeautified = use.reporter ?
